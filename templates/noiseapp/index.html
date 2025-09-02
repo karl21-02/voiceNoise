@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비디오 노이즈 제거 & 타격음 분리</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #4a5de8;
+        }
+
+        .upload-icon {
+            font-size: 60px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 14px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f2ff;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .file-info.active {
+            display: block;
+        }
+
+        .file-name {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .result-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result-container.active {
+            display: block;
+        }
+
+        .result-container.error {
+            background: #ffebee;
+        }
+
+        .result-title {
+            color: #2e7d32;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .result-container.error .result-title {
+            color: #c62828;
+        }
+
+        .download-btn {
+            background: #4caf50;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .download-btn:hover {
+            background: #45a049;
+        }
+
+        .error-message {
+            color: #c62828;
+            margin-top: 10px;
+        }
+
+        .supported-formats {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .supported-formats strong {
+            color: #333;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .processing {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 비디오 오디오 처리</h1>
+        <p class="subtitle">노이즈 제거 & 타격음 분리 (xiph/rnnoise)</p>
+        
+        <form id="uploadForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">클릭하여 비디오 파일 선택</div>
+                <div class="upload-subtext">또는 파일을 여기로 드래그 & 드롭</div>
+                <input type="file" id="fileInput" name="file" accept=".mp4,.avi,.mov,.mkv">
+            </div>
+            
+            <div class="file-info" id="fileInfo">
+                <div class="file-name" id="fileName"></div>
+                <div class="file-size" id="fileSize"></div>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn" disabled>
+                처리 시작
+            </button>
+        </form>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">처리 중...</div>
+        </div>
+        
+        <div class="result-container" id="resultContainer">
+            <div class="result-title" id="resultTitle"></div>
+            <div id="resultContent"></div>
+        </div>
+        
+        <div class="supported-formats">
+            <strong>지원 형식:</strong> MP4, AVI, MOV, MKV<br>
+            <strong>최대 크기:</strong> 500MB<br>
+            <strong>처리 내용:</strong> RNNoise 노이즈 제거 → HPSS 타격음 분리
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultContent = document.getElementById('resultContent');
+
+        // 클릭으로 파일 선택
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 드래그 & 드롭 이벤트
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+
+        // 파일 선택 처리
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                // 파일 크기 확인
+                const maxSize = 500 * 1024 * 1024; // 500MB
+                if (file.size > maxSize) {
+                    alert('파일이 너무 큽니다. 최대 500MB까지 가능합니다.');
+                    fileInput.value = '';
+                    return;
+                }
+
+                // 파일 형식 확인
+                const allowedTypes = ['.mp4', '.avi', '.mov', '.mkv'];
+                const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                if (!allowedTypes.includes(fileExt)) {
+                    alert('지원하지 않는 파일 형식입니다. MP4, AVI, MOV, MKV만 가능합니다.');
+                    fileInput.value = '';
+                    return;
+                }
+
+                // 파일 정보 표시
+                fileName.textContent = file.name;
+                fileSize.textContent = formatFileSize(file.size);
+                fileInfo.classList.add('active');
+                submitBtn.disabled = false;
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // 폼 제출 처리
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            // UI 상태 변경
+            submitBtn.disabled = true;
+            submitBtn.textContent = '처리 중...';
+            submitBtn.classList.add('processing');
+            progressContainer.classList.add('active');
+            resultContainer.classList.remove('active');
+            
+            // 진행 상황 시뮬레이션 (실제로는 서버에서 진행률을 받아야 함)
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 10;
+                    progressFill.style.width = Math.min(progress, 90) + '%';
+                }
+            }, 500);
+
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // CSRF 토큰 추가
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            try {
+                progressText.textContent = '업로드 중...';
+                
+                const response = await fetch('/separate_clicks/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                });
+
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+
+                if (response.ok) {
+                    // 성공: 파일 다운로드
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `processed_${file.name}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    // 성공 메시지 표시
+                    progressText.textContent = '처리 완료!';
+                    resultContainer.classList.add('active');
+                    resultContainer.classList.remove('error');
+                    resultTitle.textContent = '✅ 처리 완료!';
+                    resultContent.innerHTML = `
+                        <p>파일이 성공적으로 처리되었습니다.</p>
+                        <p>다운로드가 자동으로 시작됩니다.</p>
+                    `;
+                } else {
+                    // 에러 처리
+                    const error = await response.json();
+                    throw new Error(error.error || '처리 중 오류가 발생했습니다.');
+                }
+            } catch (error) {
+                clearInterval(progressInterval);
+                progressText.textContent = '처리 실패';
+                
+                resultContainer.classList.add('active');
+                resultContainer.classList.add('error');
+                resultTitle.textContent = '❌ 처리 실패';
+                resultContent.innerHTML = `<div class="error-message">${error.message}</div>`;
+            } finally {
+                // UI 초기화
+                submitBtn.disabled = false;
+                submitBtn.textContent = '처리 시작';
+                submitBtn.classList.remove('processing');
+                
+                setTimeout(() => {
+                    progressContainer.classList.remove('active');
+                    progressFill.style.width = '0%';
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>

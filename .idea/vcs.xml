@@ -2,7 +2,10 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ffmpeg-rnnoise-build/ffmpeg" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ffmpeg-rnnoise-build/rnnoise" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ffmpeg-rnnoise/ffmpeg" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/rnnoise" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/rnnoise-models" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/rnnoise/rnnoise" vcs="Git" />
   </component>
 </project>
