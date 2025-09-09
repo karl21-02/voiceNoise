@@ -1,8 +1,8 @@
-# VoiceNoise - 비디오 노이즈 제거 & 타격음 분리 서비스
+# VoiceNoise - 비디오 노이즈 제거 & 타격음 분리
 
-> 🎥 비디오에서 깨끗한 타격음만 추출하는 AI 기반 오디오 처리 서비스
+> 비디오에서 깨끗한 타격음만 추출하는 AI 기반 오디오 처리 서비스
 
-## 🚀 빠른 시작 (5분 설치)
+## 빠른 시작 (5분 설치)
 
 **아무것도 설치되지 않은 macOS에서 완벽하게 작동하도록 설정합니다.**
 
@@ -311,25 +311,3 @@ pip list
 # 디스크 공간
 df -h
 ```
-
-### 도움말
-- 이슈 제보: [GitHub Issues](https://github.com/your-username/voicenoise/issues)
-- 문서: [API Documentation](API_DOCUMENTATION.md)
-
----
-
-## 📄 라이선스
-
-MIT License - 자유롭게 사용하세요!
-
----
-
-## 🙏 감사의 말
-
-- [xiph/rnnoise](https://github.com/xiph/rnnoise) - 최고의 노이즈 제거 엔진
-- [FFmpeg](https://ffmpeg.org) - 강력한 멀티미디어 프레임워크
-- [librosa](https://librosa.org) - 오디오 분석 라이브러리
-
----
-
-**Made with ❤️ for clean audio**
